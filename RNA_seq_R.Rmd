@@ -128,6 +128,10 @@ se$Treatment2<- relevel(se$Treatment,
                            "WT_PCB6") # tells the system which group is "control"
 se$Treatment3<- relevel(se$Treatment, 
                            "WT_PCB30") # tells the system which group is "control"
+se$Treatment4<- relevel(se$Treatment, 
+                           "GF_VEH") # tells the system which group is "control"
+se$Treatment5<- relevel(se$Treatment, 
+                           "GF_PCB6") # tells the system which group is "control"
 se <- se[ rowSums(assay(se)) >= 10, ] #remove genes that have a total count less than 10, a good prefilter measure
 ```
 
@@ -142,6 +146,12 @@ dds2 <- DESeqDataSet(se,
 
 dds3 <- DESeqDataSet(se, 
                     design = ~ Treatment3) 
+
+dds4 <- DESeqDataSet(se, 
+                    design = ~ Treatment4) 
+
+dds5 <- DESeqDataSet(se, 
+                    design = ~ Treatment5) 
 ```
 
 #***Exploratory analysis and visualization***
@@ -160,23 +170,45 @@ This function will print out a message for the various steps it performs. These 
 dds <- DESeq(dds)
 dds2 <- DESeq(dds2)
 dds3 <- DESeq(dds3)
+dds4 <- DESeq(dds4)
+dds5 <- DESeq(dds5)
 
-resultsNames(dds3)
-res1<-results(dds, name="Treatment1_GF_VEH_vs_WT_VEH")
-res2<-results(dds2, name="Treatment2_GF_PCB6_vs_WT_PCB6")
-res3<-results(dds3, name="Treatment3_GF_PCB30_vs_WT_PCB30")
-#res4<-results(dds, name="Treatment_GF_PCB30_vs_GF_VEH")
-#res5<-results(dds, name="Treatment_GF_PCB6_vs_GF_VEH")
-#res6<-results(dds, name="Treatment_WT_PCB6_vs_WT_VEH")
-#res7<-results(dds, name="Treatment_WT_PCB30_vs_WT_VEH")
+resultsNames(dds2)
+GV_WTV<-results(dds, name="Treatment1_GF_VEH_vs_WT_VEH")
+WT6_WTV<-results(dds, name = "Treatment1_WT_PCB6_vs_WT_VEH")
+WT30_WTV<-results(dds, name = "Treatment1_WT_PCB30_vs_WT_VEH")
+G6_WT6<-results(dds2, name="Treatment2_GF_PCB6_vs_WT_PCB6")
+WT30_WT6<-results(dds2, name="Treatment2_WT_PCB30_vs_WT_PCB6")
+G30_WT30<-results(dds3, name="Treatment3_GF_PCB30_vs_WT_PCB30")
+G30_GV<-results(dds4, name="Treatment4_GF_PCB30_vs_GF_VEH")
+G6_GV<-results(dds4, name="Treatment4_GF_PCB6_vs_GF_VEH")
+G30_G6<-results(dds5, name="Treatment5_GF_PCB30_vs_GF_PCB6")
+
 ```
 Calling results without any arguments will extract the estimated log2 fold changes and p values for the last variable in the design formula. If there are more than 2 levels for this variable, results will extract the results table for a comparison of the last level over the first level. Treatment 6 vs vehicle
 ```{r}
-summary(res1)
-summary(res2)
-summary(res3)
+summary(GV_WTV)
+summary(WT6_WTV)
+summary(WT30_WTV)
+summary(G6_WT6)
+summary(WT30_WT6)
+summary(G30_WT30)
+summary(G30_GV)
+summary(G6_GV)
+summary(G30_G6)
 ```
 
+```{r}
+res1<-GV_WTV
+res2<-WT6_WTV
+res3<-WT30_WTV
+res4<-G6_WT6
+res5<-WT30_WT6
+res6<-G30_WT30
+res7<-G30_GV
+res8<-G6_GV
+res9<-G30_G6
+```
 
 #***Annotating results***
 
@@ -197,104 +229,256 @@ res3$symbol <- mapIds(Mus.musculus, #which annotation package model to use
                      column="SYMBOL", #add a column of symbols associated with row.names arguments for the model
                      keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
+res4$symbol <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res4), #using rownames
+                     column="SYMBOL", #add a column of symbols associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res5$symbol <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res5), #using rownames
+                     column="SYMBOL", #add a column of symbols associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res6$symbol <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res6), #using rownames
+                     column="SYMBOL", #add a column of symbols associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res7$symbol <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res7), #using rownames
+                     column="SYMBOL", #add a column of symbols associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res8$symbol <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res8), #using rownames
+                     column="SYMBOL", #add a column of symbols associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res9$symbol <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res9), #using rownames
+                     column="SYMBOL", #add a column of symbols associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
 
 ```
 
 ```{r}
-res1$TXname <- mapIds(Mus.musculus, #which annotation package model to use
+res1$entrez <- mapIds(Mus.musculus, #which annotation package model to use
                      keys=row.names(res1), #using rownames
-                     column="TXNAME", #add a column of symbols associated with row.names arguments for the model
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
                      keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
-res2$TXname <- mapIds(Mus.musculus, #which annotation package model to use
+res2$entrez <- mapIds(Mus.musculus, #which annotation package model to use
                      keys=row.names(res2), #using rownames
-                     column="TXNAME", #add a column of symbols associated with row.names arguments for the model
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
                      keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
-res3$TXname <- mapIds(Mus.musculus, #which annotation package model to use
+res3$entrez <- mapIds(Mus.musculus, #which annotation package model to use
                      keys=row.names(res3), #using rownames
-                     column="TXNAME", #add a column of symbols associated with row.names arguments for the model
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res4$entrez <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res4), #using rownames
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res5$entrez <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res5), #using rownames
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res6$entrez <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res6), #using rownames
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res7$entrez <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res7), #using rownames
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res8$entrez <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res8), #using rownames
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res9$entrez <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res9), #using rownames
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
                      keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
 
 ```
 
 ```{r}
-res1$entrez <- mapIds(Mus.musculus,
-                     keys=row.names(res1),
-                     column="ENTREZID",
-                     keytype="GENEID",
+res1$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res1), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
-res2$entrez <- mapIds(Mus.musculus,
-                     keys=row.names(res2),
-                     column="ENTREZID",
-                     keytype="GENEID",
+res2$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res2), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
-res3$entrez <- mapIds(Mus.musculus,
-                     keys=row.names(res3),
-                     column="ENTREZID",
-                     keytype="GENEID",
+res3$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res3), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
+res4$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res4), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res5$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res5), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res6$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res6), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res7$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res7), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res8$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res8), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res9$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res9), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+
 ```
 
 ```{r}
-res1$Genename <- mapIds(Mus.musculus,
-                     keys=row.names(res1),
-                     column="GENENAME", #now add a column for gene names or gene description
-                     keytype="GENEID",
+res1$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res1), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
-res2$Genename <- mapIds(Mus.musculus,
-                     keys=row.names(res2),
-                     column="GENENAME", #now add a column for gene names or gene description
-                     keytype="GENEID",
+res2$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res2), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
-res3$Genename <- mapIds(Mus.musculus,
-                     keys=row.names(res3),
-                     column="GENENAME", #now add a column for gene names or gene description
-                     keytype="GENEID",
+res3$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res3), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
+res4$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res4), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res5$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res5), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res6$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res6), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res7$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res7), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res8$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res8), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res9$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res9), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+
 ```
 
 ```{r}
-res1$GOID <- mapIds(Mus.musculus,
-                     keys=row.names(res1),
-                     column="GO", #now add a column for gene names or gene description
-                     keytype="GENEID",
+res1$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res1), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
-res2$GOID <- mapIds(Mus.musculus,
-                     keys=row.names(res2),
-                     column="GO", #now add a column for gene names or gene description
-                     keytype="GENEID",
+res2$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res2), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
-res3$GOID <- mapIds(Mus.musculus,
-                     keys=row.names(res3),
-                     column="GO", #now add a column for gene names or gene description
-                     keytype="GENEID",
+res3$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res3), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
+res4$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res4), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res5$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res5), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res6$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res6), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res7$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res7), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res8$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res8), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+res9$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res9), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+
 ```
-```{r}
-res1$ensembl <- mapIds(Mus.musculus,
-                     keys=row.names(res1),
-                     column="ENSEMBL", #now add a column for gene names or gene description
-                     keytype="GENEID",
-                     multiVals="first")
-res2$ensembl <- mapIds(Mus.musculus,
-                     keys=row.names(res2),
-                     column="ENSEMBL", #now add a column for gene names or gene description
-                     keytype="GENEID",
-                     multiVals="first")
-res3$ensembl <- mapIds(Mus.musculus,
-                     keys=row.names(res3),
-                     column="ENSEMBL", #now add a column for gene names or gene description
-                     keytype="GENEID",
-                     multiVals="first")
-```
+
+res1<-GV_WTV
+res2<-WT6_WTV
+res3<-WT30_WTV
+res4<-G6_WT6
+res5<-WT30_WT6
+res6<-G30_WT30
+res7<-G30_GV
+res8<-G6_GV
+res9<-G30_G6
 
 
 ```{r}
 write.csv( as.data.frame(res1), file="Results_spreadsheets/GF_veh_vs_WT_VEH_results.csv" )
-write.csv( as.data.frame(res2), file="Results_spreadsheets/GF_PCB6_vs_WT_PCB6_results.csv" )
-write.csv( as.data.frame(res3), file="Results_spreadsheets/GF_PCB30_vs_WT_PCB30_results.csv" )
+write.csv( as.data.frame(res2), file="Results_spreadsheets/WT_PCB6_vs_WT_VEH_results.csv" )
+write.csv( as.data.frame(res3), file="Results_spreadsheets/WT_PCB30_vs_WT_VEH_results.csv" )
+write.csv( as.data.frame(res4), file="Results_spreadsheets/GF_PCB6_vs_WT_PCB6_results.csv" )
+write.csv( as.data.frame(res5), file="Results_spreadsheets/WT_PCB30_vs_WT_PCB6_results.csv" )
+write.csv( as.data.frame(res6), file="Results_spreadsheets/GF_PCB30_vs_WT_PCB30_results.csv" )
+write.csv( as.data.frame(res7), file="Results_spreadsheets/GF_PCB30_vs_GF_VEH_results.csv" )
+write.csv( as.data.frame(res8), file="Results_spreadsheets/GF_PCB6_vs_GF_VEH_results.csv" )
+write.csv( as.data.frame(res9), file="Results_spreadsheets/GF_PCB30_vs_GF_PCB6_results.csv" )
 ```
 
 
@@ -302,18 +486,39 @@ write.csv( as.data.frame(res3), file="Results_spreadsheets/GF_PCB30_vs_WT_PCB30_
 resOrdered1 <- res1[order(res1$padj),] #reorder the genes based on significance
 resOrdered2 <- res2[order(res2$padj),] #reorder the genes based on significance
 resOrdered3 <- res3[order(res3$padj),] #reorder the genes based on significance
+resOrdered4 <- res4[order(res4$padj),] #reorder the genes based on significance
+resOrdered5 <- res5[order(res5$padj),] #reorder the genes based on significance
+resOrdered6 <- res6[order(res6$padj),] #reorder the genes based on significance
+resOrdered7 <- res7[order(res7$padj),] #reorder the genes based on significance
+resOrdered8 <- res8[order(res8$padj),] #reorder the genes based on significance
+resOrdered9 <- res9[order(res9$padj),] #reorder the genes based on significance
 ```
 
 
+```{r}
+my_list<-list( "Germ Free Vehicle vs Wild Type Vehicle"= res1,
+              "Wild Type 6 mg vs Wild Type Vehicle"= res2,
+              "Wild Type 30 mg vs Wild Type Vehicle"= res3,
+              "Germ Free 6 mg vs Wild Type 6 mg"= res4,
+              "Wild Type 30 mg vs Wild Type 6 mg"= res5,
+              "Germ Free 30 mg vs Wild Type 30 mg"= res6,
+              "Germ Free 30 mg vs Germ Free Vehicle" = res7,
+              "Germ Free 6 mg vs Germ Free Vehicle" = res8,
+              "Germ Free 30 mg vs Germ Free 6 mg" = res9)
+
+```
+
+#for loop for Gene and kegg enrichment
 #gene enrichment
 ```{r}
-x<- res1[order(res1$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
-gene_list<-x$log2FoldChange
-names(gene_list)<-x$ensembl
-head(gene_list)
-```
 
-```{r}
+plot_list_enrich<- list()
+for (i in names(my_list)) {
+    print(i)
+  x<- my_list[[i]][order(my_list[[i]]$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
+gene_list<-x$log2FoldChange
+names(gene_list)<-x$ENSEMBL
+
 gse <- gseGO(geneList=gene_list, 
              ont ="ALL", 
              keyType = "ENSEMBL", 
@@ -325,140 +530,40 @@ gse <- gseGO(geneList=gene_list,
              OrgDb = org.Mm.eg.db, 
              pAdjustMethod = "none")
 
-```
-
-res1<-results(dds, name="Treatment1_GF_VEH_vs_WT_VEH")
-res2<-results(dds2, name="Treatment2_GF_PCB6_vs_WT_PCB6")
-res3<-results(dds3, name="Treatment3_GF_PCB30_vs_WT_PCB30")
-
-```{r}
-tiff(file = 'gene_enrichment/GF_VEH_VS_WT_VEH_enrichment.tiff', units="in", width=7, height=5, res=1000)
 dot<-dotplot(gse, showCategory=10, split=".sign") +
   facet_grid(.~.sign)+
-  ggtitle("Germ Free vs Wild type Vehicle Enrichment")+ theme(axis.text.y = element_text(size = 5))    
+  ggtitle(paste(i,"Gene Enrichment"))+ theme(axis.text.y = element_text(size = 5))    
 
-dot
+plot_list_enrich[[i]] <- dot
+
+print(dot)
+
+  data<-data.frame(gse)
+    write.csv(data ,file=paste('gene_enrichment/',i,'gene enrichment.csv'))
+}
+
+```
+
+```{r}
+for (i in names(plot_list_enrich)) {
+tiff(file = paste('gene_enrichment/',i,'gene enrichment.tiff'), units="in", width=7, height=5, res=1000)
+print(plot_list_enrich[[i]])
 dev.off()
-dot
-```
-
-```{r}
-x<- res2[order(res2$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
-gene_list<-x$log2FoldChange
-names(gene_list)<-x$ensembl
-head(gene_list)
-```
-
-```{r}
-gse2 <- gseGO(geneList=gene_list, 
-             ont ="ALL", 
-             keyType = "ENSEMBL", 
-             nPerm = 10000, 
-             minGSSize = 3, 
-             maxGSSize = 800, 
-             pvalueCutoff = 0.05, 
-             verbose = TRUE, 
-             OrgDb = org.Mm.eg.db, 
-             pAdjustMethod = "none")
-
-```
-
-```{r}
-tiff(file = 'gene_enrichment/GF_PCB6_VS_WT_PCB6_enrichment.tiff', units="in", width=7, height=5, res=1000)
-dot<-dotplot(gse2, showCategory=10, split=".sign") +
-  facet_grid(.~.sign)+
-  ggtitle("Germ Free vs Wild type 6 mg/kg Enrichment")+ theme(axis.text.y = element_text(size = 5))    
-
-dot
-dev.off()
-dot
-```
-
-```{r}
-x<- res3[order(res3$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
-gene_list<-x$log2FoldChange
-names(gene_list)<-x$ensembl
-head(gene_list)
-```
-
-```{r}
-gse3 <- gseGO(geneList=gene_list, 
-             ont ="ALL", 
-             keyType = "ENSEMBL", 
-             nPerm = 10000, 
-             minGSSize = 3, 
-             maxGSSize = 800, 
-             pvalueCutoff = 0.05, 
-             verbose = TRUE, 
-             OrgDb = org.Mm.eg.db, 
-             pAdjustMethod = "none")
-
-```
-
-
-```{r}
-tiff(file = 'gene_enrichment/GF_PCB30_VS_WT_PCB30_enrichment.tiff', units="in", width=7, height=5, res=1000)
-dot<-dotplot(gse3, showCategory=10, split=".sign") +
-  facet_grid(.~.sign)+
-  ggtitle("Germ Free vs Wild type 30 mg/kg Enrichment")+ theme(axis.text.y = element_text(size = 5))    
-
-dot
-dev.off()
-dot
-```
-
-```{r}
-data<-data.frame(gse)
-data2<-data.frame(gse2)
-data3<-data.frame(gse3)
-
-write.csv(data ,file="gene_enrichment/GF_VEH_VS_WT_VEH_gene_enrichment.csv")
-write.csv(data2 ,file="gene_enrichment/GF_PCB6_VS_WT_PCB6_gene_enrichment.csv")
-write.csv(data3 ,file="gene_enrichment/GF_PCB30_VS_WT_PCB30_gene_enrichment.csv")
+}  
 ```
 
 
 #KEGG pathview
+
 ```{r}
-x<- res1[order(res1$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
+
+plot_list_kegg<- list()
+for (i in names(my_list)) {
+    print(i)
+  x<- my_list[[i]][order(my_list[[i]]$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
 gene_list<-x$log2FoldChange
 names(gene_list)<-x$entrez
-head(gene_list)
-```
 
-
-```{r}
-kegg_organism = "mmu"
-kk2 <- gseKEGG(geneList     = gene_list,
-               organism     = kegg_organism,
-               nPerm        = 10000,
-               minGSSize    = 3,
-               maxGSSize    = 800,
-               pvalueCutoff = 0.05,
-               pAdjustMethod = "none",
-               keyType       = "ncbi-geneid")
-```
-
-```{r}
-tiff(file = 'KEGG_enrichment/GF_VEH_VS_WT_VEH_KEGG_enrichment.tiff', units="in", width=8, height=5, res=1000)
-dot<-dotplot(kk2, showCategory=5, split=".sign") +
-  facet_grid(.~.sign)+
-  ggtitle("Germ Free vs Wild Type Vehichle KEGG Enrichment")+ theme(axis.text.y = element_text(size = 5))
-
-dot
-dev.off()
-dot
-```
-
-```{r}
-x<- res2[order(res2$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
-gene_list<-x$log2FoldChange
-names(gene_list)<-x$entrez
-head(gene_list)
-```
-
-
-```{r}
 kegg_organism = "mmu"
 kk3 <- gseKEGG(geneList     = gene_list,
                organism     = kegg_organism,
@@ -468,60 +573,63 @@ kk3 <- gseKEGG(geneList     = gene_list,
                pvalueCutoff = 0.05,
                pAdjustMethod = "none",
                keyType       = "ncbi-geneid")
-```
 
-```{r}
-tiff(file = 'KEGG_enrichment/GF_PCB6_VS_WT_PCB6_KEGG_enrichment.tiff', units="in", width=8, height=5, res=1000)
-dot<-dotplot(kk3, showCategory=5, split=".sign") +
+dot<-dotplot(kk3, showCategory=10, split=".sign") +
   facet_grid(.~.sign)+
-  ggtitle("Germ Free vs Wild Type 6 mg/kg KEGG Enrichment")+ theme(axis.text.y = element_text(size = 5))
+  ggtitle(paste(i,"KEGG Enrichment"))+ theme(axis.text.y = element_text(size = 5))    
 
-dot
-dev.off()
-dot
+plot_list_kegg[[i]] <- dot
+
+print(dot)
+
+  data<-data.frame(kk3)
+    write.csv(data ,file=paste('KEGG_enrichment/',i,'KEGG enrichment.csv'))
+}
+
 ```
 
 ```{r}
-x<- res3[order(res3$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
+for (i in names(plot_list_kegg)) {
+tiff(file = paste('KEGG_enrichment/',i,'KEGG enrichment.tiff'), units="in", width=7, height=5, res=1000)
+print(plot_list_kegg[[i]])
+dev.off()
+}  
+```
+
+
+# Produce the native KEGG plot (PNG)
+```{r}
+# Produce the native KEGG plot (PNG)
+for (i in names(my_list)) {
+  x<- my_list[[i]][order(my_list[[i]]$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
 gene_list<-x$log2FoldChange
 names(gene_list)<-x$entrez
-head(gene_list)
-```
-
-
-```{r}
-kegg_organism = "mmu"
-kk4 <- gseKEGG(geneList     = gene_list,
-               organism     = kegg_organism,
-               nPerm        = 10000,
-               minGSSize    = 3,
-               maxGSSize    = 800,
-               pvalueCutoff = 0.05,
-               pAdjustMethod = "none",
-               keyType       = "ncbi-geneid")
+  
+z <- pathview(gene.data=gene_list, 
+                          pathway.id="00565", 
+                          species = kegg_organism, 
+                          out.suffix = i)
+zz<-data.frame(z$plot.data.gene)
+write.csv(zz, file = "lipid metabolism/kegg_to_gene_id.csv")
+}
 ```
 
 ```{r}
-tiff(file = 'KEGG_enrichment/GF_PCB30_VS_WT_PCB30_KEGG_enrichment.tiff', units="in", width=8, height=5, res=1000)
-dot<-dotplot(kk4, showCategory=5, split=".sign") +
-  facet_grid(.~.sign)+
-  ggtitle("Germ Free vs Wild Type 30 mg/kg KEGG Enrichment")+ theme(axis.text.y = element_text(size = 5))
+# Produce the native KEGG plot (PNG)
+for (i in names(my_list)) {
+  x<- my_list[[i]][order(my_list[[i]]$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
+gene_list<-x$log2FoldChange
+names(gene_list)<-x$entrez
+  
+z <- pathview(gene.data=gene_list, 
+                          pathway.id="00564", 
+                          species = kegg_organism, 
+                          out.suffix = i)
 
-dot
-dev.off()
-dot
+zz<-data.frame(z$plot.data.gene)
+write.csv(zz, file = "glycerophospholipid metabolism/kegg_to_gene_id.csv")
+}
 ```
-```{r}
-df<-data.frame(kk2)
-df2<-data.frame(kk3)
-df3<-data.frame(kk4)
-
-write.csv(df ,file="KEGG_enrichment/GF_VEH_VS_WT_VEH_KEGG_enrichment.csv")
-write.csv(df2 ,file="KEGG_enrichment/GF_PCB6_VS_WT_PCB6_KEGG_enrichment.csv")
-write.csv(df3 ,file="KEGG_enrichment/GF_PCB30_VS_WT_PCB30_KEGG_enrichment.csv")
-```
-
-
 
 #plotting individual genes of interest (Liver)
 Using normalized counts (prebuilt into DESEQ2) which normalizes counts by the estimated size factors (or normalization factors if these were used) and adds a pseudocount of 1/2 to allow for log scale plotting.
