@@ -1,0 +1,316 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#BiocManager::install("Mus.musculus")
+#BiocManager::install("enrichplot")
+#BiocManager::install("clusterProfiler")
+#BiocManager::install("scRNAseq")
+#BiocManager::install("SingleCellExperiment")
+#BiocManager::install("TOAST")
+#devtools::install_github('xuranw/MuSiC')
+#remotes::install_github("renozao/xbioc")
+
+# install the MuSiC2 package
+#if (!"MuSiC2" %in% rownames(installed.packages())) {
+ # devtools::install_github('Jiaxin-Fan/MuSiC2')
+#}
+```
+
+
+The majority of Library packages are listed here. If you want to include more just install and load at the end of the list. If code isn't recognizing the function, it is likely that R didn't load the package that the function comes from.
+#load libraries every time
+```{r, results='hide'}
+library(ggplot2)
+library(devtools)
+library(rgl)
+library(tidyverse)
+library(tidyr)
+library(RColorBrewer)
+library(expss)
+library(dplyr)
+library(BiocManager)
+library(RMariaDB)
+library(GenomicAlignments)
+library(BiocParallel)
+library(GenomicFeatures)
+library(DESeq2)
+library(Mus.musculus)
+library(Rsamtools)
+library(pheatmap)
+library(topGO)
+library(gridExtra)
+library(AnnotationDbi)
+library(org.Mm.eg.db)
+library(EnhancedVolcano)
+library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+library(enrichplot)
+library(clusterProfiler)
+library(pathview)
+library(readr)
+library(MuSiC2)
+library(ggpubr)
+library(ggsignif)
+library(rstatix)
+library(scRNAseq)
+library(VennDiagram)
+library(stringr)
+library(tibble)
+```
+
+Set your working directory and pull in your reference genome to compare your samples to. We will read the gene model from an Ensembl GTF file. Be sure your gene model reflects the same model used in your samples. 
+
+***Define the Gene Model***
+```{r}
+TxDb<-makeTxDbFromUCSC(genome = "mm10",
+                        tablename ="knownGene", 
+                        goldenPath.url = getOption("UCSC.goldenPath.url"))
+```
+
+For additional notes reference "https://www.bioconductor.org/help/course-materials/2016/CSAMA/lab-3-rnaseq/rnaseq_gene_CSAMA2016.html"
+
+The following line produces a GRangesList of all the exons grouped by gene (Lawrence et al. 2013). Each element of the list is a GRanges object of the exons for a gene
+```{r}
+ebg <- exonsBy(TxDb, 
+               by="gene")
+ebg
+g_ids<-names(ebg)
+```
+
+Now that our gene model reference is ready we can load in samples and analyze them accordingly. I found separating by tissue type was easiest. But it can also be helpful to load all samples together. 
+
+***Liver Samples***
+```{r}
+info<- read.csv(file = "RNA-seq_metadata.csv", #reading in the sample information
+                   header = T, 
+                   sep = ",")
+
+filenames <- file.path("P:/OEH/Faculty/hlehmler/research/Lehmler Group-Amanda Bullert/RNAseq/fastq_files/BAM_files/", 
+                           info$bam_id)
+file.exists(filenames) #a sanity check to make sure you have files named
+```
+
+Next specify the details about how the BAM files should be treated in R, e.g., only process 2 million reads at a time. This can be modified to your computing limitations.
+```{r}
+bamfiles <- BamFileList(filenames, 
+                            yieldSize=2000000)
+seqinfo(bamfiles)
+```
+
+#***Counting***
+```{r}
+
+se <- summarizeOverlaps(features=ebg, #define the gene reference
+                            reads=bamfiles, #samples to be read
+                            mode="Union", 
+                            singleEnd=FALSE, #False indicates samples are paired-end
+                            ignore.strand=FALSE, #not a strand specific experiment
+                            BPPARAM= SerialParam(progressbar = TRUE)) #progress bar shown
+se
+head(assay(se)) #access the counts
+str(metadata(rowRanges(se))) #just to look a the structure of data
+
+```
+
+
+#proceed here (no need to recount summarized experiments)
+
+```{r}
+colData(se) #metadata about the samples
+colData(se)<-DataFrame(info) #take the sample info and assign it as the metadata
+se$group<- as.factor(se$Treatment) #organizing structure of groups
+se$group<- relevel(se$group, 
+                           "WT") # tells the system which group is "control"
+se <- se[ rowSums(assay(se)) >= 10, ] #remove genes that have a total count less than 10, a good prefilter measure
+```
+
+#***Using DeSeq2***
+We can now construct a DESeqDataSet object to formulate a starting point for our analysis. You need to add an appropriate design for analysis
+```{r}
+dds10 <- DESeqDataSet(se, 
+                    design = ~ group) 
+```
+
+#***Exploratory analysis and visualization***
+*transformations*
+The variance stabilizing transformation (VST) a goal of stablizing the variance across the range of values. produce log2-like values for high counts. 
+```{r}
+vsd <- vst(dds10)
+```
+
+#results
+#***Differential Expression***
+Lets run a differential expression pipeline using the raw counts
+
+This function will print out a message for the various steps it performs. These are described in more detail in the manual page for DESeq, which can be accessed by typing ?DESeq. Briefly these are: the estimation of size factors (controlling for differences in the sequencing depth of the samples), the estimation of dispersion values for each gene, and fitting a generalized linear model.
+```{r}
+dds10 <- DESeq(dds10)
+
+resultsNames(dds10)
+GF_WT<-results(dds10, name="Treatment1_GF_VEH_vs_WT_VEH")
+
+```
+Calling results without any arguments will extract the estimated log2 fold changes and p values for the last variable in the design formula. If there are more than 2 levels for this variable, results will extract the results table for a comparison of the last level over the first level. Treatment 6 vs vehicle
+```{r}
+summary(GF_WT)
+
+```
+
+```{r}
+res10<-GF_WT
+
+```
+
+#***Annotating results***
+
+How to assign actual gene names to our counts. Using an annotation package for Mus musculus. 
+```{r}
+res10$symbol <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res1), #using rownames
+                     column="SYMBOL", #add a column of symbols associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+```
+
+```{r}
+res10$entrez <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res1), #using rownames
+                     column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+```
+
+```{r}
+res10$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res1), #using rownames
+                     column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+```
+
+```{r}
+res10$GO <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res1), #using rownames
+                     column="GO", #add a column of GOs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+
+```
+
+```{r}
+res10$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res1), #using rownames
+                     column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+```
+
+res1<-GV_WTV
+res2<-WT6_WTV
+res3<-WT30_WTV
+res4<-G6_WT6
+res5<-WT30_WT6
+res6<-G30_WT30
+res7<-G30_GV
+res8<-G6_GV
+res9<-G30_G6
+res10<-GF_WT
+
+```{r}
+write.csv( as.data.frame(res10), file="Results_spreadsheets/GF_vs_WT_meta_results.csv" )
+```
+
+
+```{r}
+resOrdered10 <- res10[order(res10$padj),] #reorder the genes based on significance
+```
+
+
+----------------
+#**gene enrichment analysis (GSEA)**
+```{r}
+x<- res10[order(res10$log2FoldChange, decreasing = TRUE),] #reorder the genes based on significance
+head(x)
+x<-na.omit(x)
+gene_list<-x$log2FoldChange
+names(gene_list)<-x$ensembl
+head(gene_list)
+```
+
+```{r}
+gse <- gseGO(geneList= gene_list, 
+             ont ="ALL", 
+             keyType = "ENSEMBL", 
+             nPerm = 10000, 
+             minGSSize = 3, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = org.Mm.eg.db, 
+             pAdjustMethod = "none")
+
+```
+
+```{r}
+tiff(file = 'gene_enrichment/GF_WT_meta_enrichment.tiff', units="in", width=10, height=8, res=1000)
+dot<-dotplot(gse, showCategory=5, split=".sign") +
+  scale_color_viridis(option = "inferno") +
+  facet_grid(.~.sign)+
+  scale_y_discrete(labels = function(x) ifelse(str_detect(x, "gap"), "", str_wrap(x, width = 50)))+
+  theme(axis.text.y = element_text(size = 12), 
+        strip.background = element_blank(), strip.text.x = element_text(size = 12))   
+dot
+dev.off()
+dot
+```
+
+
+# MALE KEGG pathview
+```{r}
+x<- res10[order(res10$log2FoldChange, decreasing = TRUE),]  #reorder the genes based on significance
+x<-na.omit(x)
+gene_list<-x$log2FoldChange
+names(gene_list)<-x$ENTREZID
+head(gene_list)
+```
+
+
+```{r}
+kegg_organism = "mmu"
+kk <- gseKEGG(geneList     = gene_list,
+               organism     = kegg_organism,
+               nPerm        = 10000,
+               minGSSize    = 3,
+               maxGSSize    = 800,
+               pvalueCutoff = 0.05,
+               pAdjustMethod = "none",
+               keyType       = "ncbi-geneid")
+```
+
+```{r}
+
+tiff(file = 'KEGG_enrichment/GF_vs_WT_meta_KEGG_enrichment.tiff', units="in", width=10, height=8, res=1000)
+dot<-dotplot(kk, showCategory=5, split=".sign") +
+  scale_color_viridis(option = "inferno") +
+  facet_grid(.~.sign)+
+  scale_y_discrete(labels = function(x) ifelse(str_detect(x, "gap"), "", str_wrap(x, width = 50)))+
+  theme(axis.text.y = element_text(size = 12), 
+        strip.background = element_blank(), strip.text.x = element_text(size = 12))   
+dot
+dev.off()
+dot
+```
+
+```{r}
+data<-data.frame(kk)
+write.csv(data ,file="KEGG_enrichment/GF_vs_WT_meta_KEGG_enrichment.csv")
+
+```
+
+```{r}
+# Produce the native KEGG plot (PNG)
+path<- pathview(gene.data=gene_list, pathway.id="00565", species = kegg_organism)
+
+```
