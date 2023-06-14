@@ -9,7 +9,7 @@ output: html_notebook
 #BiocManager::install("clusterProfiler")
 #BiocManager::install("scRNAseq")
 #BiocManager::install("SingleCellExperiment")
-#BiocManager::install("TOAST")
+BiocManager::install("pathview")
 #devtools::install_github('xuranw/MuSiC')
 #remotes::install_github("renozao/xbioc")
 
@@ -58,6 +58,7 @@ library(scRNAseq)
 library(VennDiagram)
 library(stringr)
 library(tibble)
+library(viridis)
 ```
 
 Set your working directory and pull in your reference genome to compare your samples to. We will read the gene model from an Ensembl GTF file. Be sure your gene model reflects the same model used in your samples. 
@@ -86,7 +87,7 @@ Now that our gene model reference is ready we can load in samples and analyze th
 info<- read.csv(file = "RNA-seq_metadata.csv", #reading in the sample information
                    header = T, 
                    sep = ",")
-
+info<-info %>% separate(Treatment, c("genotype","exp"),"_")
 filenames <- file.path("P:/OEH/Faculty/hlehmler/research/Lehmler Group-Amanda Bullert/RNAseq/fastq_files/BAM_files/", 
                            info$bam_id)
 file.exists(filenames) #a sanity check to make sure you have files named
@@ -120,7 +121,7 @@ str(metadata(rowRanges(se))) #just to look a the structure of data
 ```{r}
 colData(se) #metadata about the samples
 colData(se)<-DataFrame(info) #take the sample info and assign it as the metadata
-se$group<- as.factor(se$Treatment) #organizing structure of groups
+se$group<- as.factor(se$genotype) #organizing structure of groups
 se$group<- relevel(se$group, 
                            "WT") # tells the system which group is "control"
 se <- se[ rowSums(assay(se)) >= 10, ] #remove genes that have a total count less than 10, a good prefilter measure
@@ -149,7 +150,7 @@ This function will print out a message for the various steps it performs. These 
 dds10 <- DESeq(dds10)
 
 resultsNames(dds10)
-GF_WT<-results(dds10, name="Treatment1_GF_VEH_vs_WT_VEH")
+GF_WT<-results(dds10, name="group_GF_vs_WT")
 
 ```
 Calling results without any arguments will extract the estimated log2 fold changes and p values for the last variable in the design formula. If there are more than 2 levels for this variable, results will extract the results table for a comparison of the last level over the first level. Treatment 6 vs vehicle
@@ -235,7 +236,7 @@ x<- res10[order(res10$log2FoldChange, decreasing = TRUE),] #reorder the genes ba
 head(x)
 x<-na.omit(x)
 gene_list<-x$log2FoldChange
-names(gene_list)<-x$ensembl
+names(gene_list)<-x$ENSEMBL
 head(gene_list)
 ```
 
@@ -272,8 +273,9 @@ dot
 x<- res10[order(res10$log2FoldChange, decreasing = TRUE),]  #reorder the genes based on significance
 x<-na.omit(x)
 gene_list<-x$log2FoldChange
-names(gene_list)<-x$ENTREZID
+names(gene_list)<-x$entrez
 head(gene_list)
+write.csv(gene_list, file="gene_list.csv")
 ```
 
 
@@ -311,6 +313,6 @@ write.csv(data ,file="KEGG_enrichment/GF_vs_WT_meta_KEGG_enrichment.csv")
 
 ```{r}
 # Produce the native KEGG plot (PNG)
-path<- pathview(gene.data=gene_list, pathway.id="00565", species = kegg_organism)
+pathview(gene.data=gene_list, pathway.id="00565", species = kegg_organism)
 
 ```
