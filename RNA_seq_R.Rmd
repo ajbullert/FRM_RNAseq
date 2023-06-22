@@ -92,6 +92,7 @@ info<- read.csv(file = "RNA-seq_metadata.csv", #reading in the sample informatio
 filenames <- file.path("P:/OEH/Faculty/hlehmler/research/Lehmler Group-Amanda Bullert/RNAseq/fastq_files/BAM_files/", 
                            info$bam_id)
 file.exists(filenames) #a sanity check to make sure you have files named
+
 ```
 
 Next specify the details about how the BAM files should be treated in R, e.g., only process 2 million reads at a time. This can be modified to your computing limitations.
@@ -113,15 +114,15 @@ se <- summarizeOverlaps(features=ebg, #define the gene reference
 se
 head(assay(se)) #access the counts
 str(metadata(rowRanges(se))) #just to look a the structure of data
-
+rownames(info)<-info$bam_id
+colData(se) #metadata about the samples
+colData(se)<-DataFrame(info) #take the sample info and assign it as the metadata
 ```
 
 
 #proceed here (no need to recount summarized experiments)
 
 ```{r}
-colData(se) #metadata about the samples
-colData(se)<-DataFrame(info) #take the sample info and assign it as the metadata
 se$Treatment<- as.factor(se$Treatment) #organizing structure of groups
 se$Treatment1<- relevel(se$Treatment, 
                            "WT_VEH") # tells the system which group is "control"
@@ -134,6 +135,8 @@ se$Treatment4<- relevel(se$Treatment,
 se$Treatment5<- relevel(se$Treatment, 
                            "GF_PCB6") # tells the system which group is "control"
 se <- se[ rowSums(assay(se)) >= 10, ] #remove genes that have a total count less than 10, a good prefilter measure
+
+write.csv(as.data.frame(assay(se)), file= "counts.csv")
 ```
 
 #***Using DeSeq2***
@@ -855,3 +858,76 @@ ggexport(
 )
 ```
 
+
+**cyp genes**
+```{r}
+top_gene<-read.csv("gene_list_cyps_kegg.csv", header = FALSE)
+top_gene<-as.character(top_gene$V1)
+
+setdiff(top_gene,rownames(counts(dds))) #check if all genes of interest can be found in the rownames of the deseq object --> if not you will not be able to run the block of code. Character(0) or integer(0) is a what you want to see
+```
+
+```{r}
+stat.test<-read.csv("cyps_FDR.csv")
+stat.test$symbol<-factor(stat.test$symbol)
+stat.test$group2<-as.factor(stat.test$group2)
+stat.test$group1<-as.factor(stat.test$group1)
+stat.test
+```
+
+```{r}
+data_1 <- split(as.tibble(stat.test[,2:4]), as.factor(stat.test$symbol))
+```
+```{r}
+dds$Treatment<-factor(dds$Treatment, levels = c("WT_VEH","WT_PCB6","WT_PCB30","GF_VEH","GF_PCB6","GF_PCB30"))
+```
+
+
+```{r message=FALSE}
+plot_list<-list()
+for (i in unique(1:length(top_gene))){
+  gene <- top_gene[i]
+  b<- plotCounts(dds, gene = gene, intgroup = "Treatment",normalized = TRUE, returnData = TRUE)
+  z = max(b$count) + (max(b$count)*0.05)
+  d <- ggplot(b, aes(factor(Treatment), count))+
+    geom_violin(mapping = aes(x = Treatment, 
+                              y = count, 
+                              fill = Treatment))+
+    #adding jitter to avoid overplotting
+    geom_point(mapping = aes(x = Treatment, 
+                             y = count, 
+                             fill = Treatment, 
+                             shape= Treatment), 
+               size = 5, position = position_jitter(width = 0.3, height=0))+ 
+    scale_y_continuous(expand = c(0,0) , limits = c(0,z+z*0.4)) +
+    stat_summary(mapping = aes(x = Treatment, y = count), 
+                 geom = 'crossbar', 
+                 fun= 'mean', 
+                 colour = 'black', 
+                 width=0.2)+
+  scale_fill_manual(values = c("#999900", "#FF9933", "#3399FF", "#9933FF","#666666","#FF66CC")) +
+  scale_shape_manual(values = c(19, 15, 17, 18,25,16)) +
+  labs(x = NULL, y = "Normalized counts")+ # changes the y axis label, removes x axis label
+  theme_classic(base_size = 20)+# changes the overall style of the plot
+  ggtitle(paste0(res1$symbol[gene])) +
+  theme(
+    axis.text.x = element_text(colour = "black", size = 10, angle = 15),
+    axis.text.y = element_text(colour = "black"))+
+  stat_pvalue_manual(data_1[[i]], 
+    y.position = z, step.increase = 0.2,
+    label = "p = {scales::pvalue(p.adj)}", hide.ns = TRUE
+    )
+  plot_list[[gene]] <- d
+}
+
+head(plot_list)
+```
+
+
+```{r warning=FALSE}
+# Export into pdf: display multiple plots on the same page
+ggexport(
+  plotlist = plot_list, filename = "cyp_gene_plot.pdf", 
+  ncol = 1, nrow = 1, height = 7, width = 7, res = 600,pointsize = 8
+)
+```
