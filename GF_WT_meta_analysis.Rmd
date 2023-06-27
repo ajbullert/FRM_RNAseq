@@ -112,7 +112,7 @@ se <- summarizeOverlaps(features=ebg, #define the gene reference
 se
 head(assay(se)) #access the counts
 str(metadata(rowRanges(se))) #just to look a the structure of data
-
+rownames(metadata)<-info$bam_id
 ```
 
 
@@ -169,7 +169,7 @@ res10<-GF_WT
 How to assign actual gene names to our counts. Using an annotation package for Mus musculus. 
 ```{r}
 res10$symbol <- mapIds(Mus.musculus, #which annotation package model to use
-                     keys=row.names(res1), #using rownames
+                     keys=row.names(res10), #using rownames
                      column="SYMBOL", #add a column of symbols associated with row.names arguments for the model
                      keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
@@ -177,7 +177,7 @@ res10$symbol <- mapIds(Mus.musculus, #which annotation package model to use
 
 ```{r}
 res10$entrez <- mapIds(Mus.musculus, #which annotation package model to use
-                     keys=row.names(res1), #using rownames
+                     keys=row.names(res10), #using rownames
                      column="ENTREZID", #add a column of entrezs associated with row.names arguments for the model
                      keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
@@ -185,7 +185,7 @@ res10$entrez <- mapIds(Mus.musculus, #which annotation package model to use
 
 ```{r}
 res10$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
-                     keys=row.names(res1), #using rownames
+                     keys=row.names(res10), #using rownames
                      column="GENENAME", #add a column of GENENAMEs associated with row.names arguments for the model
                      keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
@@ -193,7 +193,7 @@ res10$GENENAME <- mapIds(Mus.musculus, #which annotation package model to use
 
 ```{r}
 res10$GO <- mapIds(Mus.musculus, #which annotation package model to use
-                     keys=row.names(res1), #using rownames
+                     keys=row.names(res10), #using rownames
                      column="GO", #add a column of GOs associated with row.names arguments for the model
                      keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
@@ -202,8 +202,22 @@ res10$GO <- mapIds(Mus.musculus, #which annotation package model to use
 
 ```{r}
 res10$ENSEMBL <- mapIds(Mus.musculus, #which annotation package model to use
-                     keys=row.names(res1), #using rownames
+                     keys=row.names(res10), #using rownames
                      column="ENSEMBL", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+```
+```{r}
+res10$ENZYME <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res10), #using rownames
+                     column="ENZYME", #add a column of ENSEMBLs associated with row.names arguments for the model
+                     keytype="GENEID", #our rownames are gene id's 
+                     multiVals="first")
+```
+```{r}
+res10$Protein <- mapIds(Mus.musculus, #which annotation package model to use
+                     keys=row.names(res10), #using rownames
+                     column="ENSEMBLPROT", #add a column of ENSEMBLs associated with row.names arguments for the model
                      keytype="GENEID", #our rownames are gene id's 
                      multiVals="first")
 ```
@@ -313,6 +327,7 @@ write.csv(data ,file="KEGG_enrichment/GF_vs_WT_meta_KEGG_enrichment.csv")
 
 ```{r}
 # Produce the native KEGG plot (PNG)
-pathview(gene.data=gene_list, pathway.id="00565", species = kegg_organism)
+plot<-pathview(gene.data=gene_list, pathway.id="00564",species = kegg_organism, kegg.native = T,
+same.layer = F)
 
 ```
